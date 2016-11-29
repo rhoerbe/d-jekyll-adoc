@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+
+# settings for docker build, run and exec
+
+main() {
+  init_sudo
+  set_volume_mapping
+  set_image_and_container_name
+  #set_users
+  set_buildargs
+  set_run_args
+  set_network
+  set_vol_mapping
+  #set_x11_client
+  #set_pkcs11
+  create_containeruser
+  #enable_sshd()     # usually used only for debugging - requires installed sshd in image
+}
+
+
+set_volume_mapping() {
+    DOCKERVOL_ROOT='/dv'
+    #SHAREDDATA_ROOT="${DOCKERVOL_ROOT}/01shared_data"    # data shared between containers
+}
+
+
+set_image_and_container_name() {
+    # This IMGID qualifies image, container, user and IP adddress; this is helpful for managing
+    # processes on the docker host etc.
+    IMGID='09'  # range from 02 .. 99; must be unique per node
+    PROJSHORT='jekyll-adoc'
+    export IMAGENAME="r2h2/$PROJSHORT"
+    export CONTAINERNAME="${IMGID}$PROJSHORT"
+}
+
+
+set_users() {
+    export CONTAINERUSER="$PROJSHORT${IMGID}"   # group and user to run container
+    export CONTAINERUID="80${IMGID}"     # gid and uid for CONTAINERUSER
+    export SHARED_CONTAINERS_GROUP="sharedcont"   # group shared by other containers
+    export SHARED_CONTAINERS_GROUPID="8000"
+    export START_AS_ROOT=      # (e.g. for apache to fall back to www user)
+}
+
+
+set_buildargs() {
+    export BUILDARGS="
+    "
+}
+
+
+set_run_args() {
+    export ENVSETTINGS="
+    "
+    export STARTCMD='/start.sh'  # unset or blank to use image default
+}
+
+
+set_network() {
+    export NETWORKSETTINGS=""
+}
+
+
+set_vol_mapping() {
+    export VOLROOT="${DOCKERVOL_ROOT}/$CONTAINERNAME"  # container volumes on docker host
+    export VOLMAPPING="
+        -v $VOLROOT/var/data:/var/data:Z
+    "
+
+    # check if required read-only directories are missing (path relative to $VOLROOT)
+    #chkdir etc/xyz
+
+    # create if not existing; set owner for path on docker host relative to $VOLROOT
+    createdir var/data $CONTAINERUSER
+
+    $sudo mkdir -p $SHAREDDATA_ROOT/$CONTAINERNAME/www/
+    $sudo chown -R $CONTAINERUSER:$SHARED_CONTAINERS_GROUP $SHAREDDATA_ROOT/$CONTAINERNAME/www/
+}
+
+
+set_x11_client() {
+    # How to enable xclients in Docker containers: http://wiki.ros.org/docker/Tutorials/GUI
+    export ENVSETTINGS="$ENVSETTINGS
+        -e DISPLAY=$DISPLAY
+    "
+    export VOLMAPPING="$VOLMAPPING
+        -v /tmp/.X11-unix/:/tmp/.X11-unix:Z
+    "
+}
+
+
+set_pkcs11() {
+    #enable Smartcard Reader in Docker
+    # --privileged mapping of usb devices allows a generic configreation without knowing the
+    # USB device name. Alternatively, devices can be mapped using '--device'
+    export VOLMAPPING="$VOLMAPPING
+        --privileged -v /dev/bus/usb:/dev/bus/usb
+    "
+}
+
+
+create_containeruser() {
+    # first start: create user/group/host directories
+    if ! id -u $CONTAINERUSER &>/dev/null; then
+        if [[ ${OSTYPE//[0-9.]/} == 'darwin' ]]; then  # OSX
+                $sudo sudo dseditgroup -o create -i $CONTAINERUID $CONTAINERUSER
+                $sudo dscl . create /Users/$CONTAINERUSER UniqueID $CONTAINERUID
+                $sudo dscl . create /Users/$CONTAINERUSER PrimaryGroupID $CONTAINERUID
+        else  # Linux
+          source /etc/os-release
+          case $ID in
+            centos|fedora|rhel)
+                $sudo groupadd --non-unique -g $CONTAINERUID $CONTAINERUSER || true
+                $sudo adduser --non-unique -M --gid $CONTAINERUID --comment "" --uid $CONTAINERUID $CONTAINERUSER
+                ;;
+            debian|ubuntu)
+                $sudo groupadd -g $CONTAINERUID $CONTAINERUSER
+                $sudo adduser --gid $CONTAINERUID --no-create-home --disabled-password --gecos "" --uid $CONTAINERUID $CONTAINERUSER
+                ;;
+            *)
+                echo "do not know how to add user/group for OS ${OSTYPE} ${NAME}"
+                ;;
+          esac
+        fi
+    fi
+}
+
+
+enable_sshd() {
+    # add settings to start sshd (for remote debugging)
+    export NETWORKSETTINGS="$NETWORKSETTINGS -p 2022:2022"
+    export VOLMAPPING="$VOLMAPPING -v $VOLROOT/opt/ssh:/opt/ssh:Z"
+    export STARTCMD='/start_sshd.sh'  # need to have this script installed in image
+}
+
+
+init_sudo() {
+    if [ $(id -u) -ne 0 ]; then
+        sudo="sudo"
+    fi
+}
+
+chkdir() {
+    dir=$1
+    if [ ! -e "$VOLROOT/$dir" ]; then
+        echo "$0: Missing directory: $VOLROOT/$dir"
+        exit 1
+    fi
+}
+
+
+createdir() {
+    dir=$1; user=$2
+    $sudo mkdir -p "$VOLROOT/$dir"
+    $sudo chown -R $user:$user "$VOLROOT/$dir"
+}
+
+
+main
