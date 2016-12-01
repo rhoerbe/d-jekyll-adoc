@@ -29,7 +29,7 @@ set_image_and_container_name() {
     # processes on the docker host etc.
     IMGID='09'  # range from 02 .. 99; must be unique per node
     PROJSHORT='jekyll-adoc'
-    export IMAGENAME="r2h2/$PROJSHORT"
+    export IMAGENAME="rhoerbe/$PROJSHORT"
     export CONTAINERNAME="${IMGID}$PROJSHORT"
 }
 
@@ -64,7 +64,7 @@ set_network() {
 set_vol_mapping() {
     export VOLROOT="${DOCKERVOL_ROOT}/$CONTAINERNAME"  # container volumes on docker host
     export VOLMAPPING="
-        -v $VOLROOT/var/data:/var/data:Z
+        -v $PWD:/var/data:Z
     "
 
     # check if required read-only directories are missing (path relative to $VOLROOT)
