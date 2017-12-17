@@ -11,10 +11,7 @@ main() {
   set_run_args
   set_network
   set_vol_mapping
-  #set_x11_client
-  #set_pkcs11
   create_containeruser
-  #enable_sshd()     # usually used only for debugging - requires installed sshd in image
 }
 
 
@@ -52,7 +49,7 @@ set_buildargs() {
 set_run_args() {
     export ENVSETTINGS="
     "
-    export STARTCMD='/start.sh'  # unset or blank to use image default
+    export STARTCMD=''  # unset or blank to use image default
 }
 
 
