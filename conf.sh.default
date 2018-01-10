@@ -30,7 +30,7 @@ _set_image_and_container_name() {
 }
 
 
-set_users() {
+_set_users() {
     export CONTAINERUSER="$PROJSHORT${IMGID}"   # group and user to run container
     export CONTAINERUID="80${IMGID}"     # gid and uid for CONTAINERUSER
     export START_AS_ROOT=      # 'True' (e.g. for apache to fall back to www user)
