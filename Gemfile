@@ -1,6 +1,4 @@
 source 'https://rubygems.org'
-gem 'jekyll'
-gem 'asciidoctor'
-gem 'jekyll-asciidoc'
-gem 'coderay'
-gem 'octopress', '~> 3.0'
+gem "jekyll", "~> 3.8.3"
+#gem 'asciidoctor'
+#gem 'jekyll-asciidoc'
