@@ -1,0 +1,10 @@
+version: "3.5"
+services:
+  jekyll:
+    build:
+      context: .
+    container_name: jekyll
+    image: r2h2/jekyll_adoc
+    hostname: jekyll
+    volumes:
+      - $PWD:/var/data:Z
