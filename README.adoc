@@ -1,0 +1,7 @@
+# Jekyll build with asciidoc support
+
+# clone and cd into this repo, then docker-build
+docker build -t local/jekyll-adoc
+
+# cd into source dir, then jekyll-build
+docker run -it --rm -v "$PWD":/var/data:Z local/jekyll-adoc jekyll build
